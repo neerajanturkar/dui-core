@@ -1,11 +1,14 @@
 const User = require("../model/user.model");
+const Application = require("../model/application.model");
 const jwt = require("jsonwebtoken");
 const libCommon = require("../lib/common");
 
 module.exports.createUser = async function (request) {
   let newUser = new User(request.body);
+  console.log(newUser);
   try {
     const savedUser = await newUser.save();
+    console.log(savedUser);
     const token = await libCommon.generateToken(savedUser);
     return {
       success: true,
@@ -29,8 +32,11 @@ module.exports.login = async function (request) {
     const isAuthenticated = await user.comparePassword(request.body.password);
     if (isAuthenticated === true) {
       const token = await libCommon.generateToken(user);
+
+      const applications = await Application.find({ userId: user._id });
       const data = {
         user: user,
+        applications: applications,
       };
       return {
         success: true,

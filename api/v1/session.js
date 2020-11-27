@@ -35,4 +35,10 @@ function disconnect(req, res) {
   });
 }
 
+router.put("/:id/publish", publish);
+function publish(req, res) {
+  SessionService.publishAction(req).then((result) => {
+    res.status(result.status).json(result);
+  });
+}
 module.exports = router;

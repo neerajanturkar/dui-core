@@ -6,6 +6,8 @@ const uiProfileSchema = mongoose.Schema(
     default: { type: Boolean },
     applicationId: { type: mongoose.Types.ObjectId, ref: "applications" },
     userId: { type: mongoose.Types.ObjectId, ref: "users" },
+    type: { type: String, enum: ["mobile", "web"] },
+    profile: [],
   },
   {
     timestamps: true,

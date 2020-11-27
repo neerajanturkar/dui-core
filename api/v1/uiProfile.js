@@ -5,7 +5,7 @@ const UiProfileService = require("../../service/uiProfile.service");
 
 router.post(
   "/",
-  libCommon.validateRequiredParams(["url", "name"]),
+  libCommon.validateRequiredParams(["name", "type"]),
   libCommon.verifyToken,
   createNewUiProfile
 );

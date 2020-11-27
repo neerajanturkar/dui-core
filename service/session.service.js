@@ -1,6 +1,8 @@
 const Session = require("../model/session.model");
 const Application = require("../model/application.model");
 const UiProfile = require("../model/uiProfile.model");
+const redis = require("redis");
+const redisClient = redis.createClient();
 
 module.exports.createSession = async function (request) {
   try {
@@ -12,10 +14,19 @@ module.exports.createSession = async function (request) {
       _id: request.body.uiProfileId,
     });
     if (uiProfile.applicationId.toString() == application._id.toString()) {
+      const profile = [];
+      uiProfile.profile.forEach((element) => {
+        let uiElement = {
+          name: element.name,
+          value: element.default,
+        };
+        profile.push(uiElement);
+      });
       const session = new Session({
         numActiveConnections: 0,
         applicationId: application._id,
         uiProfileId: uiProfile._id,
+        profile: profile,
       });
       const savedSession = await session.save();
       return {
@@ -71,6 +82,13 @@ module.exports.connectSession = async function (request) {
     );
 
     //Todo  Pusblish Connected to Redis
+    redisClient.publish(
+      session._id.toString(),
+      "CONNECTED::" + currentNumConnections,
+      () => {
+        console.log("CONNECTED on " + session._id);
+      }
+    );
 
     const updatedSession = await Session.findOne({ _id: session._id });
     const uiProfile = await UiProfile.findOne({ _id: session.uiProfileId });
@@ -103,6 +121,13 @@ module.exports.disconnectSession = async function (request) {
     );
 
     //Todo  Pusblish Disonnect to Redis
+    redisClient.publish(
+      session._id.toString(),
+      "DISCONNECTED::" + currentNumConnections,
+      () => {
+        console.log("DISCONNECTED on " + session._id);
+      }
+    );
 
     const updatedSession = await Session.findOne({ _id: session._id });
     const uiProfile = await UiProfile.findOne({ _id: session.uiProfileId });
@@ -111,6 +136,34 @@ module.exports.disconnectSession = async function (request) {
       status: 200,
       data: { session: updatedSession, uiProfile: uiProfile },
       message: "Session disconnected successfully",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      status: 500,
+      message: error,
+    };
+  }
+};
+
+module.exports.publishAction = async function (request) {
+  try {
+    const session = await Session.findOne({ _id: request.params.id });
+    if (session.isActive) {
+      redisClient.publish(session._id.toString(), request.body.action, () => {
+        console.log(request.body.action);
+      });
+    } else {
+      return {
+        success: false,
+        status: 200,
+        message: "No Active session found. Unable to publish action",
+      };
+    }
+    return {
+      success: true,
+      status: 200,
+      message: "Action Published successfully",
     };
   } catch (error) {
     return {
