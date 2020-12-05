@@ -34,3 +34,67 @@ module.exports.createUiProfile = async function (request) {
     };
   }
 };
+
+module.exports.getUiProfile = async function (request) {
+  try {
+    const jwtVerifiedData = jwt.verify(request.token, "secretKey");
+    const uiProfile = await UiProfile.findOne({ _id: request.params.id });
+
+    return {
+      success: true,
+      status: 200,
+      message: "UI Profile fetched successfully",
+      data: uiProfile,
+    };
+  } catch (error) {
+    if (
+      error.name === "JsonWebTokenError" ||
+      error.name === "TokenExpiredError"
+    ) {
+      return {
+        success: false,
+        status: 403,
+        message: error,
+      };
+    }
+    return {
+      success: false,
+      status: 500,
+      message: error,
+    };
+  }
+};
+
+module.exports.updateUiProfile = async function (request) {
+  try {
+    const jwtVerifiedData = jwt.verify(request.token, "secretKey");
+    const updatedUiProfile = await UiProfile.findByIdAndUpdate(
+      request.params.id,
+      { $set: request.body },
+      { new: true }
+    );
+
+    return {
+      success: true,
+      status: 200,
+      message: "UI Profile updated successfully",
+      data: updatedUiProfile,
+    };
+  } catch (error) {
+    if (
+      error.name === "JsonWebTokenError" ||
+      error.name === "TokenExpiredError"
+    ) {
+      return {
+        success: false,
+        status: 403,
+        message: error,
+      };
+    }
+    return {
+      success: false,
+      status: 500,
+      message: error,
+    };
+  }
+};

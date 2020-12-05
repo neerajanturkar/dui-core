@@ -14,13 +14,13 @@ module.exports.createSession = async function (request) {
       _id: request.body.uiProfileId,
     });
     if (uiProfile.applicationId.toString() == application._id.toString()) {
-      const profile = [];
+      const profile = {};
       uiProfile.profile.forEach((element) => {
-        let uiElement = {
-          name: element.name,
-          value: element.default,
-        };
-        profile.push(uiElement);
+        // let uiElement = {
+        //   name: element.name,
+        //   value: element.default,
+        // };
+        profile[element.name] = element.default;
       });
       const session = new Session({
         numActiveConnections: 0,
@@ -59,7 +59,10 @@ module.exports.getSession = async function (request) {
     return {
       success: true,
       status: 200,
-      data: Object.assign(session, uiProfile),
+      data: {
+        session: session,
+        uiProfile: uiProfile,
+      },
       message: "Session fetched successfully",
     };
   } catch (error) {
@@ -151,8 +154,17 @@ module.exports.publishAction = async function (request) {
     const session = await Session.findOne({ _id: request.params.id });
     if (session.isActive) {
       redisClient.publish(session._id.toString(), request.body.action, () => {
-        console.log(request.body.action);
+        // console.log(request.body.action);
       });
+      const key = "profile." + request.body.action.split("::")[1];
+      const value = request.body.action.split("::")[2];
+      const update = {};
+      update[key] = value;
+      await Session.updateOne(
+        { _id: session._id },
+        { $set: update },
+        { new: true }
+      );
     } else {
       return {
         success: false,
@@ -160,10 +172,14 @@ module.exports.publishAction = async function (request) {
         message: "No Active session found. Unable to publish action",
       };
     }
+    const updatedSession = await Session.findOne({ _id: request.params.id });
     return {
       success: true,
       status: 200,
       message: "Action Published successfully",
+      data: {
+        session: updatedSession,
+      },
     };
   } catch (error) {
     return {
